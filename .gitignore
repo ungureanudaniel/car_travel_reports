@@ -1,0 +1,15 @@
+# Ignore the virtual environment
+myvenv/
+
+# Ignore the tests directory
+.csv
+.xlsx
+.xls
+
+# ignore pytests cache
+.pytest_cache
+
+# others
+.pyc
+build
+/build
