@@ -50,10 +50,10 @@ class CarReportApp(App):
 
     def build(self):
         # Layout
-        main_layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
+        main_layout = BoxLayout(orientation='vertical', padding=5, spacing=1)
 
         # Creating a sub-layout to control the width of elements (centered with horizontal alignment)
-        centered_layout = BoxLayout(orientation='vertical', size_hint=(0.6, None), pos_hint={"center_y":0.5, "center_x": 0.5}, spacing=40)
+        centered_layout = BoxLayout(orientation='vertical', size_hint=(0.6, None), pos_hint={"center_y":0.5, "center_x": 0.5}, spacing=20)
 
         # Adjusting the height dynamically based on the number of widgets
         centered_layout.bind(minimum_height=centered_layout.setter('height'))
@@ -65,9 +65,9 @@ class CarReportApp(App):
             size_hint_y=None,
             markup=True,
             pos_hint={"center_y": 0.1},
-            height=30,
+            height=20,
             halign='left',
-            valign='top'
+            valign='bottom'
             )
         centered_layout.add_widget(self.input_fuel_label)
 
@@ -75,7 +75,7 @@ class CarReportApp(App):
         self.fuel_float_input = TextInput(
             text="",
             size_hint=(1, None),
-            height=50,
+            height=30,
             input_filter='float'  # Restrict input to decimal numbers
             )
         centered_layout.add_widget(self.fuel_float_input)
@@ -185,22 +185,31 @@ class CarReportApp(App):
         return main_layout
 
     def _set_csv_path(self, selection):
-        if selection:
-            self.csv_file_path = selection[0]
-            self.file_path_label.text = f"Fișier selectat: {self.csv_file_path}"
-            self.file_path_label.color = (0, 1, 0, 1)  # set color to green
+        # Check if the selection is valid and a CSV file
+        if selection and len(selection) > 0:
+            selected_file = selection[0]
+            if os.path.isfile(selected_file) and selected_file.endswith('.csv'):
+                # If a valid CSV file is selected, set the label text and enable the report button
+                self.csv_file_path = selection[0]
+                self.file_path_label.text = f"Fișier selectat: {self.csv_file_path}"
+                self.file_path_label.color = (0, 1, 0, 1)  # set color to green
+                self.popup.dismiss()  # Close the popup
+            else:
+                #if a directory or non-CSV file is selected, show an error
+                self.file_path_label.text = "Nu ați selectat un fișier .csv"
+                self.file_path_label.color = (1, 0, 0, 1)  # Set to red
+                self.generate_report_button.disabled = True  # Disable the "Generate Report" button
         else:
-            self.file_path_label.text = "Nu ați selectat fișierul .csv"
-        self.popup.dismiss()
+            # If nothing is selected, reset the label and keep report generation disabled
+            self.file_path_label.text = "Nu ați selectat un fișier .csv"
+            self.file_path_label.color = (1, 0, 0, 1)  # Set to red
+            self.generate_report_button.disabled = True  # Disable the "Generate Report" button
+            self.popup.dismiss()
 
     def select_csv_file(self, instance):
         # set the downloads folder dinamically with os
         # Set default path to the user's Downloads directory
         csv_folder = os.path.join(os.path.expanduser("~"), "Desktop", "rapoarte_itrack")
-
-        # create FAZ folder on desktop if not there 
-        if not os.path.exists(csv_folder):
-            os.makedirs(csv_folder)
 
         # Create a FileChooser popup
         content = BoxLayout(orientation='vertical')
@@ -236,11 +245,7 @@ class CarReportApp(App):
     # open pop up for saving location    
     def save_location_popup(self, instance):
         # Set default path to the user's Downloads directory
-        save_folder = os.path.join(os.path.expanduser("~\\Desktop"))
-
-        # create FAZ folder on desktop if not there 
-        if not os.path.exists(save_folder):
-            os.makedirs(save_folder)
+        save_folder = os.path.join(os.path.expanduser("~"), "Desktop", "FAZ")
 
         # Create a FileChooser popup for selecting the save location
         content = BoxLayout(orientation='vertical')
@@ -376,7 +381,7 @@ class CarReportApp(App):
         except ValueError:
             self.status_label.text = "Asigurați-vă că datele introduse sunt corecte."
         except Exception as e:
-            self.status_label.text = f"Error: {str(e)}"
+            self.status_label.text = f"Error at report generation: {str(e)}"
 
     # processing the csv data into a pdf table
     def process_csv_to_pdf(self, csv_file_path, pdf_file_path, previous_month_fuel, deleted_columns):
@@ -422,10 +427,11 @@ class CarReportApp(App):
                 print(f"Eroare la însumarea numerelor din coloana 'Alimentari importate'! {e}")
 
             # Register the 'DejaVu Sans' font
-            pdfmetrics.registerFont(TTFont('DejaVuSans', 'C:/Users/PNB-IT/Documents/code/FAZ_PNB/Font/dejavu-fonts-ttf-2.37/ttf/DejaVuSans.ttf'))
+            pdfmetrics.registerFont(TTFont('DejaVuSans', './Font/dejavu-fonts-ttf-2.37/ttf/DejaVuSans.ttf'))
 
             # Prepare the document
-            path = pdf_file_path
+            pdf_name = f"FAZ{self.vehicle_title}_{self.start_date[:10]}-{self.end_date[:10]}.pdf"
+            path = f"{pdf_file_path}/{pdf_name}"
             doc = SimpleDocTemplate(path, pagesize=landscape(A4), leftMargin=0.3*cm, rightMargin=0.3*cm, topMargin=0.5*cm, bottomMargin=0.5*cm)
             elements = []
 
